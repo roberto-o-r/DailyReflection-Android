@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "183988221155",
+    "firebase_url": "https://dailyreflection-android.firebaseio.com",
+    "project_id": "dailyreflection-android",
+    "storage_bucket": "dailyreflection-android.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:183988221155:android:c7db83d7f8fb419a",
+        "android_client_info": {
+          "package_name": "com.isscroberto.dailyreflectionandroid"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "183988221155-59e7dhf3tpbtc3er5ttl61dp8rpev1lv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.isscroberto.dailyreflectionandroid",
+            "certificate_hash": "14f1df60324012d1b3fad923ebc1d4726bbcf9ff"
+          }
+        },
+        {
+          "client_id": "183988221155-rl33gr6ihkhebesslajldthaq98f6oj6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsW5johP3sSLzzXebe7E3BpG6S51WZOuw"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "183988221155-rl33gr6ihkhebesslajldthaq98f6oj6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
