@@ -138,4 +138,9 @@ public class SettingsActivity extends AppCompatActivity implements BillingProces
         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.isscroberto.onemovie")));
     }
 
+    @OnClick(R.id.image_one_breath)
+    public void imageOneBreathOnClick(View view) {
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.isscroberto.onebreath")));
+    }
+
 }
