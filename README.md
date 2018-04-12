@@ -1,4 +1,4 @@
-# Daily Reflection App
+# Daily Reflection
 
 https://play.google.com/store/apps/details?id=com.isscroberto.dailyreflectionandroid
 
