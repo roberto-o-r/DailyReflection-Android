@@ -26,6 +26,9 @@
         <activity android:name=".reflectiondetail.ReflectionDetailActivity" />
         <activity android:name=".reflectionssaved.ReflectionsSavedActivity" />
         <activity android:name=".settings.SettingsActivity"></activity>
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/ad_mob_app_id" />
     </application>
 
 </manifest>
