@@ -26,5 +26,8 @@ public class DailyReflectionAndroid extends Application {
                 .setCriticalFeedbackCollectors(new DefaultEmailFeedbackCollector(getString(R.string.my_email)))
                 .applyAllDefaultRules();
         //.setAlwaysShow(BuildConfig.DEBUG);
+
+        // Force a crash
+        //throw new RuntimeException("Test Crash");
     }
 }

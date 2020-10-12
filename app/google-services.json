@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "183988221155-do3cd6qao4ig1tu41sf82k7fneqbtqbb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.isscroberto.dailyreflectionandroid",
+            "certificate_hash": "daffaca980b0b13ed2a991e9c9f2452c0f863549"
+          }
+        },
+        {
           "client_id": "183988221155-59e7dhf3tpbtc3er5ttl61dp8rpev1lv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -33,22 +41,16 @@
         }
       ],
       "services": {
-        "analytics_service": {
-          "status": 1
-        },
         "appinvite_service": {
-          "status": 2,
           "other_platform_oauth_client": [
             {
               "client_id": "183988221155-rl33gr6ihkhebesslajldthaq98f6oj6.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
-        },
-        "ads_service": {
-          "status": 2
         }
-      }
+      },
+      "admob_app_id": "ca-app-pub-7136115266295688~5494300262"
     }
   ],
   "configuration_version": "1"
