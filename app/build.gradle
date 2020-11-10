@@ -3,13 +3,13 @@ apply plugin: 'realm-android'
 apply plugin: 'com.google.firebase.crashlytics'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
     defaultConfig {
         applicationId "com.isscroberto.dailyreflectionandroid"
         minSdkVersion 17
-        targetSdkVersion 28
-        versionCode 6
-        versionName "18.10.01"
+        targetSdkVersion 29
+        versionCode 7
+        versionName "20.11.09"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
     }
