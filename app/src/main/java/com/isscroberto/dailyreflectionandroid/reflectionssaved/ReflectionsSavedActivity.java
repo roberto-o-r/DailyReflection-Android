@@ -3,10 +3,14 @@ package com.isscroberto.dailyreflectionandroid.reflectionssaved;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import android.os.Bundle;
+
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,48 +19,58 @@ import android.widget.TextView;
 import com.isscroberto.dailyreflectionandroid.R;
 import com.isscroberto.dailyreflectionandroid.data.models.Reflection;
 import com.isscroberto.dailyreflectionandroid.data.source.ReflectionLocalDataSource;
+import com.isscroberto.dailyreflectionandroid.databinding.ActivityReflectionsSavedBinding;
 import com.isscroberto.dailyreflectionandroid.reflectiondetail.ReflectionDetailActivity;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
+import javax.annotation.Nonnull;
+
 import io.realm.RealmRecyclerViewAdapter;
 import io.realm.RealmResults;
 
 public class ReflectionsSavedActivity extends AppCompatActivity implements ReflectionsSavedContract.View {
 
-    //----- Bindings.
-    @BindView(R.id.list_reflections)
-    RecyclerView listReflections;
-
-    private ReflectionsSavedContract.Presenter mPresenter;
-    private RecyclerView.Adapter mAdapter;
-    private RecyclerView.LayoutManager mLayoutManager;
-    private RealmResults<Reflection> mReflections;
+    private ReflectionsSavedContract.Presenter presenter;
+    private ActivityReflectionsSavedBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_reflections_saved);
 
-        // Bind views with Butter Knife.
-        ButterKnife.bind(this);
+        //Binding.
+        binding = ActivityReflectionsSavedBinding.inflate(getLayoutInflater());
+        View view = binding.getRoot();
+        setContentView(view);
 
         // Setup toolbar.
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle("Reflections Saved");
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("Reflections Saved");
+        }
 
         // Setup recycler view.
-        listReflections.setHasFixedSize(true);
-        mLayoutManager = new LinearLayoutManager(this);
-        listReflections.setLayoutManager(mLayoutManager);
+        binding.listReflections.setHasFixedSize(true);
+        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(this);
+        binding.listReflections.setLayoutManager(mLayoutManager);
 
         // Create the presenter
-        new ReflectionsSavedPresenter(new ReflectionLocalDataSource(), this);
-        mPresenter.start();
+        presenter = new ReflectionsSavedPresenter(new ReflectionLocalDataSource());
+        presenter.takeView(this);
     }
 
     @Override
-    public boolean onSupportNavigateUp(){
+    public void onResume() {
+        super.onResume();
+        presenter.takeView(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        presenter.dropView();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
         Intent returnIntent = new Intent();
         setResult(Activity.RESULT_OK, returnIntent);
         finish();
@@ -65,21 +79,15 @@ public class ReflectionsSavedActivity extends AppCompatActivity implements Refle
     }
 
     @Override
-    public void setPresenter(ReflectionsSavedContract.Presenter presenter) {
-        mPresenter = presenter;
-    }
-
-    @Override
     public void showReflections(RealmResults<Reflection> reflections) {
         // Setup recycler view adapter.
-        mReflections = reflections;
-        mAdapter = new ReflectionAdapter(this, mReflections);
-        listReflections.setAdapter(mAdapter);
+        RecyclerView.Adapter<ReflectionAdapter.ViewHolder> mAdapter = new ReflectionAdapter(this, reflections);
+        binding.listReflections.setAdapter(mAdapter);
     }
 
     private static class ReflectionAdapter extends RealmRecyclerViewAdapter<Reflection, ReflectionAdapter.ViewHolder> {
 
-        private Context mContext;
+        private final Context mContext;
 
         public ReflectionAdapter(Context context, RealmResults<Reflection> reflections) {
             super(reflections, true);
@@ -87,20 +95,21 @@ public class ReflectionsSavedActivity extends AppCompatActivity implements Refle
         }
 
         @Override
-        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        public @Nonnull
+        ViewHolder onCreateViewHolder(@Nonnull ViewGroup parent, int viewType) {
             // Create a new view.
             View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_reflection, parent, false);
 
-            ViewHolder vh = new ViewHolder(v);
-            return vh;
+            return new ViewHolder(v);
         }
 
         @Override
-        public void onBindViewHolder(ViewHolder holder, int position) {
+        public void onBindViewHolder(@Nonnull ViewHolder holder, int position) {
             final Reflection reflection = getItem(position);
-            holder.textTitle.setText(reflection.getTitle());
-            holder.textPreview.setText(getExcerpt(reflection.getDescription()));
-
+            if (reflection != null) {
+                holder.textTitle.setText(reflection.getTitle());
+                holder.textPreview.setText(getExcerpt(reflection.getDescription()));
+            }
         }
 
         public class ViewHolder extends RecyclerView.ViewHolder {
@@ -109,25 +118,25 @@ public class ReflectionsSavedActivity extends AppCompatActivity implements Refle
 
             public ViewHolder(View v) {
                 super(v);
-                textTitle = (TextView) v.findViewById(R.id.text_title);
-                textPreview = (TextView) v.findViewById(R.id.text_preview);
+                textTitle = v.findViewById(R.id.text_title);
+                textPreview = v.findViewById(R.id.text_preview);
 
-                v.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Intent intent = new Intent(v.getContext(), ReflectionDetailActivity.class);
-                        intent.putExtra("id", getItem(getAdapterPosition()).getId());
-                        intent.putExtra("title", getItem(getAdapterPosition()).getTitle());
-                        intent.putExtra("description", getItem(getAdapterPosition()).getDescription());
-                        mContext.startActivity(intent);
+                v.setOnClickListener(v1 -> {
+                    Intent intent = new Intent(v1.getContext(), ReflectionDetailActivity.class);
+                    Reflection reflection = getItem(getAdapterPosition());
+                    if(reflection != null) {
+                        intent.putExtra("id", reflection.getId());
+                        intent.putExtra("title", reflection.getTitle());
+                        intent.putExtra("description", reflection.getDescription());
                     }
+                    mContext.startActivity(intent);
                 });
             }
         }
 
         private String getExcerpt(String input) {
             String excerpt = input;
-            if(excerpt.lastIndexOf(" ") > -1 && excerpt.length() > 99) {
+            if (excerpt.lastIndexOf(" ") > -1 && excerpt.length() > 99) {
                 excerpt = excerpt.substring(0, 100);
                 excerpt = excerpt.substring(0, excerpt.lastIndexOf(" "));
             }

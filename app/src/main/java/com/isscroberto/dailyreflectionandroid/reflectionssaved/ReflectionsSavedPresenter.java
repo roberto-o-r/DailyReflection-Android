@@ -11,24 +11,27 @@ import io.realm.RealmResults;
 
 public class ReflectionsSavedPresenter implements ReflectionsSavedContract.Presenter {
 
-    private final ReflectionLocalDataSource mReflectionLocalDataSource;
-    private final ReflectionsSavedContract.View mView;
+    private final ReflectionLocalDataSource reflectionLocalDataSource;
+    private ReflectionsSavedContract.View view;
 
-    public ReflectionsSavedPresenter(ReflectionLocalDataSource reflectionLocalDataSource, ReflectionsSavedContract.View view) {
-        mReflectionLocalDataSource = reflectionLocalDataSource;
-        mView = view;
-
-        view.setPresenter(this);
-    }
-
-    @Override
-    public void start() {
-        loadReflections();
+    public ReflectionsSavedPresenter(ReflectionLocalDataSource reflectionLocalDataSource) {
+        this.reflectionLocalDataSource = reflectionLocalDataSource;
     }
 
     @Override
     public void loadReflections() {
-        RealmResults<Reflection> reflections = mReflectionLocalDataSource.get();
-        mView.showReflections(reflections);
+        RealmResults<Reflection> reflections = reflectionLocalDataSource.get();
+        view.showReflections(reflections);
+    }
+
+    @Override
+    public void takeView(ReflectionsSavedContract.View view) {
+        this.view = view;
+        loadReflections();
+    }
+
+    @Override
+    public void dropView() {
+        this.view = null;
     }
 }

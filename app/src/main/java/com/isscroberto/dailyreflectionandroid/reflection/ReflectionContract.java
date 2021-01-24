@@ -14,11 +14,13 @@ public interface ReflectionContract {
     interface View extends BaseView<Presenter> {
         void showReflection(Item reflection);
         void showError();
+        void logError(String Message);
         void showImage(String url);
         void setLoadingIndicator(boolean active);
     }
 
-    interface Presenter extends BasePresenter {
+    interface Presenter extends BasePresenter<View> {
+        void reload();
         void loadReflection();
         void loadImage();
         void saveReflection(Reflection reflection);

@@ -12,38 +12,30 @@ import io.realm.Sort;
 
 public class ReflectionLocalDataSource {
 
-    private Realm mRealm;
+    private final Realm realm;
 
     public ReflectionLocalDataSource() {
-        mRealm = Realm.getDefaultInstance();
+        realm = Realm.getDefaultInstance();
     }
 
     public RealmResults<Reflection> get () {
-        return mRealm.where(Reflection.class).findAllSorted("Id", Sort.DESCENDING);
+        return realm.where(Reflection.class).findAllSorted("Id", Sort.DESCENDING);
     }
 
     public Reflection get(String id) {
-        return mRealm.where(Reflection.class).equalTo("Id", id).findFirst();
+        return realm.where(Reflection.class).equalTo("Id", id).findFirst();
     }
 
-    public Reflection put(Reflection reflection) {
-        mRealm.beginTransaction();
-        Reflection managedReflection = mRealm.copyToRealm(reflection);
-        mRealm.commitTransaction();
-        return managedReflection;
+    public void put(Reflection reflection) {
+        realm.beginTransaction();
+        realm.copyToRealm(reflection);
+        realm.commitTransaction();
     }
 
     public void delete (String id) {
-        final Reflection reflection = mRealm.where(Reflection.class).equalTo("Id", id).findFirst();
+        final Reflection reflection = realm.where(Reflection.class).equalTo("Id", id).findFirst();
         if(reflection != null) {
-            mRealm.executeTransaction(new Realm.Transaction() {
-
-                @Override
-                public void execute(Realm realm) {
-                    reflection.deleteFromRealm();
-                }
-
-            });
+            realm.executeTransaction(realm -> reflection.deleteFromRealm());
         }
     }
     
