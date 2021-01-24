@@ -9,7 +9,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
 import com.isscroberto.dailyreflectionandroid.R;
@@ -17,45 +16,46 @@ import com.isscroberto.dailyreflectionandroid.R;
 import com.anjlab.android.iab.v3.BillingProcessor;
 import com.anjlab.android.iab.v3.TransactionDetails;
 import com.isscroberto.dailyreflectionandroid.BuildConfig;
-
-import butterknife.BindView;
-import butterknife.ButterKnife;
-import butterknife.OnClick;
+import com.isscroberto.dailyreflectionandroid.databinding.ActivitySettingsBinding;
 
 public class SettingsActivity extends AppCompatActivity implements BillingProcessor.IBillingHandler {
 
-    //----- Bindings.
-    @BindView(R.id.button_remove_ads)
-    Button buttonRemoveAds;
-
-    private BillingProcessor mBillingProcessor;
+    private BillingProcessor billingProcessor;
+    private ActivitySettingsBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        // Bind views with Butter Knife.
-        ButterKnife.bind(this);
+        //Binding.
+        binding = ActivitySettingsBinding.inflate(getLayoutInflater());
+        View view = binding.getRoot();
+        setContentView(view);
+        binding.buttonRemoveAds.setOnClickListener((View v) -> btnRemoveAdsOnClick(view));
+        binding.textMoreApps.setOnClickListener((View v) -> textMoreAppsOnClick(view));
+        binding.textPrivacyPolicy.setOnClickListener((View v) -> textPrivacyPolicy(view));
 
         // Setup toolbar.
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
 
         // Verify if ads are enabled.
-        Boolean adsEnabled = getSharedPreferences("com.isscroberto.dailyreflectionandroid", MODE_PRIVATE).getBoolean("AdsEnabled", true);
+        boolean adsEnabled = getSharedPreferences("com.isscroberto.dailyreflectionandroid", MODE_PRIVATE).getBoolean("AdsEnabled", true);
         if(adsEnabled) {
             // Initialize billing processor.
-            mBillingProcessor = new BillingProcessor(this, getString(R.string.billing_license_key), this);
+            billingProcessor = new BillingProcessor(this, getString(R.string.billing_license_key), this);
         } else {
-            buttonRemoveAds.setVisibility(View.GONE);
+            binding.buttonRemoveAds.setVisibility(View.GONE);
         }
 
     }
 
     @Override
     public void onDestroy() {
-        if (mBillingProcessor != null) {
-            mBillingProcessor.release();
+        if (billingProcessor != null) {
+            billingProcessor.release();
         }
         super.onDestroy();
     }
@@ -71,7 +71,7 @@ public class SettingsActivity extends AppCompatActivity implements BillingProces
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (!mBillingProcessor.handleActivityResult(requestCode, resultCode, data)) {
+        if (!billingProcessor.handleActivityResult(requestCode, resultCode, data)) {
             super.onActivityResult(requestCode, resultCode, data);
         }
     }
@@ -93,11 +93,11 @@ public class SettingsActivity extends AppCompatActivity implements BillingProces
     @Override
     public void onBillingInitialized() {
         // Verify if user already removed ads.
-        boolean purchased = false;
+        boolean purchased;
         if (BuildConfig.DEBUG) {
-            purchased = mBillingProcessor.isPurchased("android.test.purchased");
+            purchased = billingProcessor.isPurchased("android.test.purchased");
         } else {
-            purchased = mBillingProcessor.isPurchased("com.isscroberto.dailyreflectionandroid.removeads");
+            purchased = billingProcessor.isPurchased("com.isscroberto.dailyreflectionandroid.removeads");
         }
 
         if(purchased) {
@@ -111,39 +111,21 @@ public class SettingsActivity extends AppCompatActivity implements BillingProces
         editor.putBoolean("AdsEnabled", false);
         editor.apply();
 
-        buttonRemoveAds.setVisibility(View.GONE);
+        binding.buttonRemoveAds.setVisibility(View.GONE);
     }
 
-    @OnClick(R.id.button_remove_ads)
     public void btnRemoveAdsOnClick(View view) {
         if (BuildConfig.DEBUG) {
-            mBillingProcessor.purchase(this, "android.test.purchased");
+            billingProcessor.purchase(this, "android.test.purchased");
         } else {
-            mBillingProcessor.purchase(this, "com.isscroberto.dailyreflectionandroid.removeads");
+            billingProcessor.purchase(this, "com.isscroberto.dailyreflectionandroid.removeads");
         }
     }
 
-    @OnClick(R.id.image_daily_prayer)
-    public void imageDailyPrayerOnClick(View view) {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.isscroberto.dailyprayerandroid")));
+    public void textMoreAppsOnClick(View view) {
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=pub:isscroberto")));
     }
 
-    @OnClick(R.id.image_daily_bible)
-    public void imageDailyBibleOnClick(View view) {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.isscroberto.dailybibleandroid")));
-    }
-
-    @OnClick(R.id.image_one_movie)
-    public void imageOneMovieOnClick(View view) {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.isscroberto.onemovie")));
-    }
-
-    @OnClick(R.id.image_one_breath)
-    public void imageOneBreathOnClick(View view) {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.isscroberto.onebreath")));
-    }
-
-    @OnClick(R.id.text_privacy_policy)
     public void textPrivacyPolicy(View view) {
         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://isscroberto.com/daily-bible-privacy-policy/")));
     }

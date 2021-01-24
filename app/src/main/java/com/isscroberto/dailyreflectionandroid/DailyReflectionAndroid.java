@@ -5,6 +5,7 @@ import android.app.Application;
 import com.github.stkent.amplify.feedback.DefaultEmailFeedbackCollector;
 import com.github.stkent.amplify.feedback.GooglePlayStoreFeedbackCollector;
 import com.github.stkent.amplify.tracking.Amplify;
+import com.google.android.gms.ads.MobileAds;
 
 import io.realm.Realm;
 
@@ -16,6 +17,9 @@ public class DailyReflectionAndroid extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        // AdMob.
+        MobileAds.initialize(this, initializationStatus -> {});
 
         // Initialize Realm.
         Realm.init(this);

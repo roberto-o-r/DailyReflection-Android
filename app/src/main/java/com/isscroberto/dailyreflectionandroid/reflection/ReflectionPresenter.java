@@ -1,5 +1,9 @@
 package com.isscroberto.dailyreflectionandroid.reflection;
 
+import android.annotation.SuppressLint;
+
+import androidx.annotation.NonNull;
+
 import com.isscroberto.dailyreflectionandroid.data.models.BingResponse;
 import com.isscroberto.dailyreflectionandroid.data.models.Item;
 import com.isscroberto.dailyreflectionandroid.data.models.Reflection;
@@ -13,6 +17,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
+import javax.annotation.Nonnull;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -23,39 +29,36 @@ import retrofit2.Response;
 
 public class ReflectionPresenter implements ReflectionContract.Presenter {
 
-    private final ReflectionRemoteDataSource mReflectionDataSource;
-    private final ReflectionLocalDataSource mReflectionLocalDataSource;
-    private final ImageRemoteDataSource mImageDataSource;
-    private final ReflectionContract.View mView;
+    private final ReflectionRemoteDataSource reflectionRemoteDataSource;
+    private final ReflectionLocalDataSource reflectionLocalDataSource;
+    private final ImageRemoteDataSource imageRemoteDataSource;
+    private ReflectionContract.View view;
 
-    public ReflectionPresenter(ReflectionRemoteDataSource reflectionDataSource, ReflectionLocalDataSource reflectionLocalDataSource, ImageRemoteDataSource imageDataSource, ReflectionContract.View view) {
-        mReflectionDataSource = reflectionDataSource;
-        mReflectionLocalDataSource = reflectionLocalDataSource;
-        mImageDataSource = imageDataSource;
-        mView = view;
-
-        view.setPresenter(this);
+    public ReflectionPresenter(ReflectionRemoteDataSource reflectionDataSource, ReflectionLocalDataSource reflectionLocalDataSource, ImageRemoteDataSource imageDataSource) {
+        reflectionRemoteDataSource = reflectionDataSource;
+        this.reflectionLocalDataSource = reflectionLocalDataSource;
+        imageRemoteDataSource = imageDataSource;
     }
 
     @Override
-    public void start() {
+    public void reload() {
         loadReflection();
         loadImage();
     }
 
     @Override
     public void loadReflection() {
-        mView.setLoadingIndicator(true);
-        mReflectionDataSource.get(new Callback<RssResponse>() {
+        view.setLoadingIndicator(true);
+        reflectionRemoteDataSource.get(new Callback<RssResponse>() {
             @Override
-            public void onResponse(Call<RssResponse> call, Response<RssResponse> response) {
+            public void onResponse(@Nonnull Call<RssResponse> call, @Nonnull Response<RssResponse> response) {
                 // Verify that response is not empty.
                 if(response.body() != null) {
                     Item reflection = response.body().getChannel().getItem();
                     reflection.setTitle(reflection.getTitle().replace("Dig", "Reflection"));
 
                     // Create reflection id based on the date.
-                    DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+                    @SuppressLint("SimpleDateFormat") DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
                     df.setTimeZone(TimeZone.getTimeZone("gmt"));
                     String id = df.format(new Date());
 
@@ -64,40 +67,41 @@ public class ReflectionPresenter implements ReflectionContract.Presenter {
 
                     // Verify if reflection is saved.
                     reflection.setFav(false);
-                    if (mReflectionLocalDataSource.get(id) != null) {
+                    if (reflectionLocalDataSource.get(id) != null) {
                         reflection.setFav(true);
                     }
-                    mView.showReflection(reflection);
+                    view.showReflection(reflection);
                 } else {
-                    mView.showError();
+                    view.showError();
                 }
 
-                mView.setLoadingIndicator(false);
+                view.setLoadingIndicator(false);
             }
 
             @Override
-            public void onFailure(Call<RssResponse> call, Throwable t) {
-                mView.showError();
-                mView.setLoadingIndicator(false);
+            public void onFailure(@NonNull Call<RssResponse> call, @NonNull Throwable t) {
+                view.showError();
+                view.logError(t.getMessage());
+                view.setLoadingIndicator(false);
             }
         });
     }
 
     @Override
     public void loadImage() {
-        mImageDataSource.get(new Callback<BingResponse>() {
+        imageRemoteDataSource.get(new Callback<BingResponse>() {
             @Override
-            public void onResponse(Call<BingResponse> call, Response<BingResponse> response) {
+            public void onResponse(@NonNull Call<BingResponse> call, @NonNull Response<BingResponse> response) {
                 // Verify response.
                 if(response.body() != null) {
                     if (!response.body().getImages().isEmpty()) {
-                        mView.showImage("http://www.bing.com/" + response.body().getImages().get(0).getUrl());
+                        view.showImage("http://www.bing.com/" + response.body().getImages().get(0).getUrl());
                     }
                 }
             }
 
             @Override
-            public void onFailure(Call<BingResponse> call, Throwable t) {
+            public void onFailure(@NonNull Call<BingResponse> call, @NonNull Throwable t) {
                 // Don't do nothing.
             }
         });
@@ -105,13 +109,22 @@ public class ReflectionPresenter implements ReflectionContract.Presenter {
 
     @Override
     public void saveReflection(Reflection reflection) {
-        mReflectionLocalDataSource.put(reflection);
+        reflectionLocalDataSource.put(reflection);
     }
 
     @Override
     public void deleteReflection(String id) {
-        mReflectionLocalDataSource.delete(id);
+        reflectionLocalDataSource.delete(id);
     }
 
+    @Override
+    public void takeView(ReflectionContract.View view) {
+        this.view = view;
+    }
+
+    @Override
+    public void dropView() {
+        this.view = null;
+    }
 
 }

@@ -1,34 +1,39 @@
 package com.isscroberto.dailyreflectionandroid.reflection;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.MobileAds;
+
 import androidx.core.content.ContextCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.appcompat.app.AppCompatActivity;
+
 import android.os.Bundle;
-import androidx.appcompat.widget.Toolbar;
+
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.text.Html;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.stkent.amplify.prompt.DefaultLayoutPromptView;
 import com.github.stkent.amplify.tracking.Amplify;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.isscroberto.dailyreflectionandroid.R;
-import com.isscroberto.dailyreflectionandroid.BuildConfig;
+import com.isscroberto.dailyreflectionandroid.analytics.AnalyticsHelper;
+import com.isscroberto.dailyreflectionandroid.analytics.EventType;
 import com.isscroberto.dailyreflectionandroid.data.models.Item;
 import com.isscroberto.dailyreflectionandroid.data.models.Reflection;
 import com.isscroberto.dailyreflectionandroid.data.source.ImageRemoteDataSource;
 import com.isscroberto.dailyreflectionandroid.data.source.ReflectionLocalDataSource;
 import com.isscroberto.dailyreflectionandroid.data.source.ReflectionRemoteDataSource;
+import com.isscroberto.dailyreflectionandroid.databinding.ActivityReflectionBinding;
 import com.isscroberto.dailyreflectionandroid.reflectionssaved.ReflectionsSavedActivity;
 import com.isscroberto.dailyreflectionandroid.settings.SettingsActivity;
 import com.squareup.picasso.Picasso;
@@ -36,225 +41,243 @@ import com.squareup.picasso.Picasso;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
+import java.util.UUID;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
-import butterknife.OnClick;
+public class ReflectionActivity extends AppCompatActivity implements ReflectionContract.View, SwipeRefreshLayout.OnRefreshListener, TextToSpeech.OnInitListener {
 
-public class ReflectionActivity extends AppCompatActivity implements ReflectionContract.View, SwipeRefreshLayout.OnRefreshListener {
-
-    //----- Bindings.
-    @BindView(R.id.toolbar)
-    Toolbar toolbar;
-    @BindView(R.id.image_back)
-    ImageView imageBack;
-    @BindView(R.id.layout_progress)
-    RelativeLayout layoutProgress;
-    @BindView(R.id.text_title)
-    TextView textTitle;
-    @BindView(R.id.text_content)
-    TextView textContent;
-    @BindView(R.id.swipe_refresh_layout)
-    SwipeRefreshLayout swipeRefreshLayout;
-    @BindView(R.id.ad_view)
-    AdView adView;
-    @BindView(R.id.button_fav)
-    FloatingActionButton buttonFav;
-
-    private ReflectionContract.Presenter mPresenter;
-    private FirebaseAnalytics mFirebaseAnalytics;
-    private Item mReflection;
+    private ReflectionContract.Presenter presenter;
+    private FirebaseAnalytics firebaseAnalytics;
+    private Item reflection;
+    private ActivityReflectionBinding binding;
+    private TextToSpeech tts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_reflection);
 
-        // Bind views with Butter Knife.
-        ButterKnife.bind(this);
+        // Binding.
+        binding = ActivityReflectionBinding.inflate(getLayoutInflater());
+        View view = binding.getRoot();
+        setContentView(view);
+        binding.buttonFav.setOnClickListener((View v) -> buttonFavOnClick(view));
+        binding.buttonPlay.setOnClickListener((View v) -> playPrayer());
 
         // Setup toolbar.
-        setSupportActionBar(toolbar);
-
-        // Setup swipe refresh layout.
-        swipeRefreshLayout.setOnRefreshListener(this);
+        setSupportActionBar(binding.toolbar);
 
         // Feedback.
         if (savedInstanceState == null) {
-            DefaultLayoutPromptView promptView = (DefaultLayoutPromptView) findViewById(R.id.prompt_view);
+            DefaultLayoutPromptView promptView = findViewById(R.id.prompt_view);
             Amplify.getSharedInstance().promptIfReady(promptView);
         }
 
-        // Verify if ads are enabled.
-        Boolean adsEnabled = getSharedPreferences("com.isscroberto.dailyreflectionandroid", MODE_PRIVATE).getBoolean("AdsEnabled", true);
-        if (adsEnabled) {
-            // Load Ad Banner.
-            AdRequest adRequest;
-            if (BuildConfig.DEBUG) {
-                adRequest = new AdRequest.Builder()
-                        .addTestDevice(getString(R.string.test_device))
-                        .build();
-            } else {
-                adRequest = new AdRequest.Builder().build();
-            }
-            adView.loadAd(adRequest);
+        // Setup swipe refresh layout.
+        binding.swipeRefreshLayout.setOnRefreshListener(this);
 
-            adView.setAdListener(new AdListener() {
+        // Setup text to speech.
+        tts = new TextToSpeech(this, this);
 
-                @Override
-                public void onAdLoaded() {
-                    super.onAdLoaded();
-                    adView.setVisibility(View.VISIBLE);
-                }
+        // AdMob.
+        setupAds();
 
-                @Override
-                public void onAdFailedToLoad(int i) {
-                    super.onAdFailedToLoad(i);
-                    adView.setVisibility(View.GONE);
-                }
-            });
-        }
-
-        // Firebase analytics.
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        // Analytics.
+        firebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
         // Create the presenter
-        new ReflectionPresenter(new ReflectionRemoteDataSource(), new ReflectionLocalDataSource(), new ImageRemoteDataSource(), this);
-        mPresenter.start();
+        presenter = new ReflectionPresenter(new ReflectionRemoteDataSource(), new ReflectionLocalDataSource(), new ImageRemoteDataSource());
+        presenter.takeView(this);
+
+        // Load the reflection.
+        presenter.reload();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        presenter.takeView(this);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        tts.stop();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        presenter.dropView();
+        tts.shutdown();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate menu resource file.
         getMenuInflater().inflate(R.menu.main, menu);
-
         // Return true to display menu
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_item_share:
-                if (mReflection != null) {
-                    // Log share event.
-                    Bundle bundle = new Bundle();
-                    bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "reflection");
-                    bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "text");
-                    mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SHARE, bundle);
+        int id = item.getItemId();
+        if (id == R.id.menu_item_share) {
+            if (reflection != null) {
+                // Log share event.
+                AnalyticsHelper.LogEvent(firebaseAnalytics, EventType.Share, null);
 
-                    Intent i = new Intent(android.content.Intent.ACTION_SEND);
-                    i.setType("text/plain");
-                    i.putExtra(android.content.Intent.EXTRA_SUBJECT, "Daily Reflection");
-                    i.putExtra(android.content.Intent.EXTRA_TEXT, mReflection.getDescription());
-                    startActivity(Intent.createChooser(i, "Share this Daily Reflection"));
-                }
-                break;
-            case R.id.menu_item_favorites:
-                navigateToFavorites();
-                break;
-            case R.id.menu_item_settings:
-                navigateToSettings();
-                break;
+                // App's link to append.
+                String link = "Daily Prayer https://play.google.com/store/apps/details?id=com.isscroberto.dailyreflectionandroid";
+
+                Intent i = new Intent(android.content.Intent.ACTION_SEND);
+                i.setType("text/plain");
+                i.putExtra(android.content.Intent.EXTRA_SUBJECT, "Daily Reflection");
+                i.putExtra(android.content.Intent.EXTRA_TEXT, reflection.getDescription() + link);
+                startActivity(Intent.createChooser(i, "Share this Daily Reflection"));
+            }
+        } else if (id == R.id.menu_item_favorites) {
+            navigateToFavorites();
+        } else if (id == R.id.menu_item_settings) {
+            navigateToSettings();
         }
-
         return super.onOptionsItemSelected(item);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == 1) {
-            // Verify if ads are enabled.
-            Boolean adsEnabled = getSharedPreferences("com.isscroberto.dailyreflectionandroid", MODE_PRIVATE).getBoolean("AdsEnabled", true);
-            if (!adsEnabled) {
-                adView.setVisibility(View.GONE);
-            }
+        super.onActivityResult(requestCode, resultCode, data);
+        switch(requestCode) {
+            case 1:
+                // Verify if ads are enabled.
+                boolean adsEnabled = getSharedPreferences("com.isscroberto.dailyreflectionandroid", MODE_PRIVATE).getBoolean("AdsEnabled", true);
+                if (!adsEnabled) {
+                    binding.adWrapper.setVisibility(View.GONE);
+                }
+                break;
+            case 2:
+                presenter.reload();
+                break;
         }
-        if (requestCode == 2) {
-            // Verify if reflection is favorited.
-            mPresenter.start();
-        }
-    }
-
-    @Override
-    public void setPresenter(ReflectionContract.Presenter presenter) {
-        mPresenter = presenter;
     }
 
     @Override
     public void showReflection(Item reflection) {
-        mReflection = reflection;
-        String description = mReflection.getDescription();
+        this.reflection = reflection;
+        String description = this.reflection.getDescription();
         if (description.contains("<hr>")) {
-            mReflection.setDescription(description.substring(0, description.lastIndexOf("<hr>")));
+            this.reflection.setDescription(description.substring(0, description.lastIndexOf("<hr>")));
         }
-        mReflection.setDescription(Html.fromHtml(mReflection.getDescription()).toString());
-        textTitle.setText(mReflection.getTitle());
-        textContent.setText(mReflection.getDescription());
-        if(mReflection.getFav()) {
-            buttonFav.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_favorite_white_24dp));
+        this.reflection.setDescription(Html.fromHtml(this.reflection.getDescription()).toString());
+        binding.textTitle.setText(this.reflection.getTitle());
+        binding.textContent.setText(this.reflection.getDescription());
+        if (this.reflection.getFav()) {
+            binding.buttonFav.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_favorite_white_24dp));
         } else {
-            buttonFav.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_favorite_border_white_24dp));
+            binding.buttonFav.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_favorite_border_white_24dp));
         }
     }
 
     @Override
     public void showError() {
-        textTitle.setText("Error loading reflection. Please try again.\nPull down to refresh.");
-        textContent.setText("");
+        binding.textTitle.setText("Error loading reflection. Please try again.\nPull down to refresh.");
+        binding.textContent.setText("");
+    }
+
+    @Override
+    public void logError(String message) {
+        // Log error.
+        Bundle params = new Bundle();
+        params.putString("error_message", message);
+        AnalyticsHelper.LogEvent(firebaseAnalytics, EventType.Error, params);
     }
 
     @Override
     public void showImage(String url) {
-        Picasso.with(this).load(url).fit().centerCrop().into(imageBack);
+        Picasso.with(this).load(url).fit().centerCrop().into(binding.imageBack);
     }
 
     @Override
     public void setLoadingIndicator(boolean active) {
         if (active) {
-            layoutProgress.setVisibility(View.VISIBLE);
-            buttonFav.setVisibility(View.INVISIBLE);
+            binding.layoutProgress.setVisibility(View.VISIBLE);
+            binding.buttonFav.setVisibility(View.GONE);
+            binding.buttonPlay.setVisibility(View.GONE);
         } else {
-            layoutProgress.setVisibility(View.GONE);
-            if (swipeRefreshLayout.isRefreshing()) {
-                swipeRefreshLayout.setRefreshing(false);
+            binding.layoutProgress.setVisibility(View.GONE);
+            if (binding.swipeRefreshLayout.isRefreshing()) {
+                binding.swipeRefreshLayout.setRefreshing(false);
                 Toast.makeText(this, "Reflection Updated!", Toast.LENGTH_SHORT).show();
             }
-            buttonFav.setVisibility(View.VISIBLE);
+            redrawFab();
         }
     }
 
     @Override
     public void onRefresh() {
-        mPresenter.start();
+        presenter.reload();
     }
 
-    @OnClick(R.id.button_fav)
+    @Override
+    public void onInit(int status) {
+        if (status == TextToSpeech.SUCCESS) {
+            int result = tts.setLanguage(Locale.US);
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                binding.buttonPlay.setEnabled(false);
+            } else {
+                tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override
+                    public void onStart(String utteranceId) {
+                    }
+
+                    @Override
+                    public void onDone(String utteranceId) {
+                        binding.buttonPlay.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_play_arrow_white_24dp));
+                    }
+
+                    @Override
+                    public void onError(String utteranceId) {
+                    }
+
+                    @Override
+                    public void onStop(String utteranceId, boolean interrupted) {
+                        super.onStop(utteranceId, interrupted);
+                        binding.buttonPlay.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_play_arrow_white_24dp));
+                    }
+                });
+            }
+        } else {
+            binding.buttonPlay.setEnabled(false);
+        }
+    }
+
     public void buttonFavOnClick(View view) {
-        if (mReflection != null) {
+        if (reflection != null) {
             // Create reflection id based on the date.
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+            @SuppressLint("SimpleDateFormat") DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
             df.setTimeZone(TimeZone.getTimeZone("gmt"));
             String id = df.format(new Date());
 
-            if(!mReflection.getFav()) {
+            if (!reflection.getFav()) {
                 // Prepare reflection for storage.
                 Reflection newReflection = new Reflection();
                 newReflection.setId(id);
-                newReflection.setTitle(mReflection.getTitle());
-                newReflection.setDescription(mReflection.getDescription());
+                newReflection.setTitle(reflection.getTitle());
+                newReflection.setDescription(reflection.getDescription());
 
                 // Save reflection.
-                mPresenter.saveReflection(newReflection);
-                mReflection.setFav(true);
-                buttonFav.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_favorite_white_24dp));
+                presenter.saveReflection(newReflection);
+                reflection.setFav(true);
+
+                AnalyticsHelper.LogEvent(firebaseAnalytics, EventType.Favorite, null);
             } else {
                 // Remove reflection from favorites.
-                mPresenter.deleteReflection(id);
-                mReflection.setFav(false);
-                buttonFav.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_favorite_border_white_24dp));
+                presenter.deleteReflection(id);
+                reflection.setFav(false);
             }
+
+            redrawFab();
         }
     }
 
@@ -268,6 +291,57 @@ public class ReflectionActivity extends AppCompatActivity implements ReflectionC
         // Favorites.
         Intent intent = new Intent(this, ReflectionsSavedActivity.class);
         startActivityForResult(intent, 2);
+    }
+
+    private void redrawFab() {
+        // Fav button.
+        binding.buttonFav.hide();
+        binding.buttonPlay.hide();
+        if (reflection != null) {
+            if (reflection.getFav()) {
+                binding.buttonFav.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_favorite_white_24dp));
+            } else {
+                binding.buttonFav.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_favorite_border_white_24dp));
+            }
+        }
+        binding.buttonFav.show();
+        binding.buttonPlay.show();
+    }
+
+    private void setupAds() {
+        // Verify if ads are enabled.
+        boolean adsEnabled = getSharedPreferences("com.isscroberto.dailyreflectionandroid", MODE_PRIVATE).getBoolean("AdsEnabled", true);
+        if (adsEnabled) {
+            // Load Ad Banner.
+            AdRequest adRequest = new AdRequest.Builder().build();
+            binding.adView.loadAd(adRequest);
+
+            binding.adView.setAdListener(new AdListener() {
+
+                @Override
+                public void onAdLoaded() {
+                    super.onAdLoaded();
+                    binding.adWrapper.setVisibility(View.VISIBLE);
+                }
+
+                @Override
+                public void onAdFailedToLoad(LoadAdError adError) {
+                    super.onAdFailedToLoad(adError);
+                    binding.adWrapper.setVisibility(View.GONE);
+                }
+            });
+        }
+    }
+
+    private void playPrayer() {
+        if (tts.isSpeaking()) {
+            tts.stop();
+            binding.buttonPlay.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_play_arrow_white_24dp));
+        } else {
+            tts.speak(reflection.getDescription(), TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
+            binding.buttonPlay.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_stop_white_24dp));
+            AnalyticsHelper.LogEvent(firebaseAnalytics, EventType.Play, null);
+        }
     }
 
 }

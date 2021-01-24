@@ -16,7 +16,7 @@ public interface ReflectionsSavedContract {
         void showReflections(RealmResults<Reflection> reflections);
     }
 
-    interface Presenter extends BasePresenter {
+    interface Presenter extends BasePresenter<View> {
         void loadReflections();
     }
 

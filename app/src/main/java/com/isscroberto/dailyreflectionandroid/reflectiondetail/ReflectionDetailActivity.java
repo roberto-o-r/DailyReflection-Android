@@ -1,92 +1,68 @@
 package com.isscroberto.dailyreflectionandroid.reflectiondetail;
 
-import android.content.DialogInterface;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.TextView;
 
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.LoadAdError;
 import com.isscroberto.dailyreflectionandroid.R;
-import com.isscroberto.dailyreflectionandroid.BuildConfig;
 import com.isscroberto.dailyreflectionandroid.data.source.ReflectionLocalDataSource;
-
-import butterknife.BindView;
-import butterknife.ButterKnife;
+import com.isscroberto.dailyreflectionandroid.databinding.ActivityReflectionDetailBinding;
 
 public class ReflectionDetailActivity extends AppCompatActivity implements ReflectionDetailContract.View {
 
-    //----- UI Bindings.
-    @BindView(R.id.text_title)
-    TextView textTitle;
-    @BindView(R.id.text_content)
-    TextView textContent;
-    @BindView(R.id.ad_view)
-    AdView adView;
-
-    private ReflectionDetailContract.Presenter mPresenter;
-    private String mId;
+    private ReflectionDetailContract.Presenter presenter;
+    private String mid;
+    private ActivityReflectionDetailBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_reflection_detail);
 
-        // Bind views with Butter Knife.
-        ButterKnife.bind(this);
+        // Binding.
+        binding = ActivityReflectionDetailBinding.inflate(getLayoutInflater());
+        View view = binding.getRoot();
+        setContentView(view);
 
         // Setup toolbar.
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle("Saved Reflections");
-
-        // Verify if ads are enabled.
-        Boolean adsEnabled = getSharedPreferences("com.isscroberto.dailyreflectionandroid", MODE_PRIVATE).getBoolean("AdsEnabled", true);
-        if (adsEnabled) {
-            // Load Ad Banner.
-            AdRequest adRequest;
-            if (BuildConfig.DEBUG) {
-                adRequest = new AdRequest.Builder()
-                        .addTestDevice(getString(R.string.test_device))
-                        .build();
-            } else {
-                adRequest = new AdRequest.Builder().build();
-            }
-            adView.loadAd(adRequest);
-
-            adView.setAdListener(new AdListener() {
-
-                @Override
-                public void onAdLoaded() {
-                    super.onAdLoaded();
-                    adView.setVisibility(View.VISIBLE);
-                }
-
-                @Override
-                public void onAdFailedToLoad(int i) {
-                    super.onAdFailedToLoad(i);
-                    adView.setVisibility(View.GONE);
-                }
-            });
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("Saved Reflections");
         }
 
+        // Ads.
+        setupAds();
+
         // Get reflection.
-        mId = getIntent().getStringExtra("id");
+        mid = getIntent().getStringExtra("id");
         String title = getIntent().getStringExtra("title");
         String description = getIntent().getStringExtra("description");
 
         // Show reflection.
-        textTitle.setText(title);
-        textContent.setText(description);
+        binding.textTitle.setText(title);
+        binding.textContent.setText(description);
 
         // Create the presenter
-        new ReflectionDetailPresenter(new ReflectionLocalDataSource(), this);
-        mPresenter.start();
+        presenter = new ReflectionDetailPresenter(new ReflectionLocalDataSource());
+        presenter.takeView(this);
+    }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        presenter.takeView(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        presenter.dropView();
     }
 
     @Override
@@ -100,41 +76,51 @@ public class ReflectionDetailActivity extends AppCompatActivity implements Refle
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_item_delete:
-                AlertDialog.Builder alert = new AlertDialog.Builder(ReflectionDetailActivity.this);
-                alert.setTitle("Delete");
-                alert.setMessage("Are you sure you want to delete?");
-                alert.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        mPresenter.deleteReflection(mId);
-                        finish();
-                    }
-                });
+        if (item.getItemId() == R.id.menu_item_delete) {
+            AlertDialog.Builder alert = new AlertDialog.Builder(ReflectionDetailActivity.this);
+            alert.setTitle("Delete");
+            alert.setMessage("Are you sure you want to delete?");
+            alert.setPositiveButton("Yes", (dialog, which) -> {
+                presenter.deleteReflection(mid);
+                finish();
+            });
 
-                alert.setNegativeButton("No", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
+            alert.setNegativeButton("No", (dialog, which) -> dialog.dismiss());
 
-                alert.show();
-                break;
+            alert.show();
         }
 
         return super.onOptionsItemSelected(item);
     }
 
     @Override
-    public boolean onSupportNavigateUp(){
+    public boolean onSupportNavigateUp() {
         finish();
         return true;
     }
 
-    @Override
-    public void setPresenter(ReflectionDetailContract.Presenter presenter) {
-        mPresenter = presenter;
+    private void setupAds() {
+        // Verify if ads are enabled.
+        boolean adsEnabled = getSharedPreferences("com.isscroberto.dailyreflectionandroid", MODE_PRIVATE).getBoolean("AdsEnabled", true);
+        if (adsEnabled) {
+            // Load Ad Banner.
+            AdRequest adRequest = new AdRequest.Builder().build();
+            binding.adView.loadAd(adRequest);
+
+            binding.adView.setAdListener(new AdListener() {
+
+                @Override
+                public void onAdLoaded() {
+                    super.onAdLoaded();
+                    binding.adWrapper.setVisibility(View.VISIBLE);
+                }
+
+                @Override
+                public void onAdFailedToLoad(LoadAdError adError) {
+                    super.onAdFailedToLoad(adError);
+                    binding.adWrapper.setVisibility(View.GONE);
+                }
+            });
+        }
     }
 }

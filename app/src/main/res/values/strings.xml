@@ -1,3 +1,12 @@
 <resources>
+    <string name="all_daily_reflection_logo">Daily Reflection Logo</string>
     <string name="app_name">Daily Reflection</string>
+    <string name="all_eunoia">eunoia</string>
+    <string name="reflection_header_image">Header Image</string>
+    <string name="reflection_fav_button">Fav Button</string>
+    <string name="reflection_play_button">Play Button</string>
+    <string name="settings_by">by</string>
+    <string name="settings_remove_ads">Remove Ads</string>
+    <string name="settings_privacy">Privacy Policy</string>
+    <string name="settings_other_apps">More apps by euronia</string>
 </resources>

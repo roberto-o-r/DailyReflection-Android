@@ -1,7 +1,6 @@
 package com.isscroberto.dailyreflectionandroid.data.source.retrofit;
 
 import com.isscroberto.dailyreflectionandroid.data.models.BingResponse;
-import com.isscroberto.dailyreflectionandroid.data.models.RssResponse;
 
 import retrofit2.Call;
 import retrofit2.http.GET;

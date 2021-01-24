@@ -11,7 +11,7 @@ public interface ReflectionDetailContract {
     interface View extends BaseView<Presenter> {
     }
 
-    interface Presenter extends BasePresenter {
+    interface Presenter extends BasePresenter<View> {
         void deleteReflection(String id);
     }
 }
