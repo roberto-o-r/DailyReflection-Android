@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 
 import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.MobileAds;
 
 import androidx.core.content.ContextCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -334,13 +333,15 @@ public class ReflectionActivity extends AppCompatActivity implements ReflectionC
     }
 
     private void playPrayer() {
-        if (tts.isSpeaking()) {
-            tts.stop();
-            binding.buttonPlay.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_play_arrow_white_24dp));
-        } else {
-            tts.speak(reflection.getDescription(), TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
-            binding.buttonPlay.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_stop_white_24dp));
-            AnalyticsHelper.LogEvent(firebaseAnalytics, EventType.Play, null);
+        if (reflection != null) {
+            if (tts.isSpeaking()) {
+                tts.stop();
+                binding.buttonPlay.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_play_arrow_white_24dp));
+            } else {
+                tts.speak(reflection.getDescription(), TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
+                binding.buttonPlay.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_stop_white_24dp));
+                AnalyticsHelper.LogEvent(firebaseAnalytics, EventType.Play, null);
+            }
         }
     }
 
