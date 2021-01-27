@@ -9,8 +9,8 @@ android {
         applicationId "com.isscroberto.dailyreflectionandroid"
         minSdkVersion 21
         targetSdkVersion 29
-        versionCode 9
-        versionName "21.01.25"
+        versionCode 10
+        versionName "21.01.27"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
     }
