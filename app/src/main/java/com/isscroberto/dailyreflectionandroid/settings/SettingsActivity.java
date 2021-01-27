@@ -123,11 +123,14 @@ public class SettingsActivity extends AppCompatActivity implements BillingProces
     }
 
     public void textMoreAppsOnClick(View view) {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=pub:isscroberto")));
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse("https://play.google.com/store/apps/dev?id=5647692301257389435"));
+        intent.setPackage("com.android.vending");
+        startActivity(intent);
     }
 
     public void textPrivacyPolicy(View view) {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://isscroberto.com/daily-bible-privacy-policy/")));
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://isscroberto.com/privacy-policy/")));
     }
 
 }
