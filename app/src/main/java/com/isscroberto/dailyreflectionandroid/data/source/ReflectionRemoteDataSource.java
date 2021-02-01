@@ -16,7 +16,7 @@ public class ReflectionRemoteDataSource implements BaseDataSource<RssResponse> {
 
     @Override
     public void get(final Callback<RssResponse> callback) {
-        Retrofit retrofit = new Retrofit.Builder().baseUrl("http://www.plough.com/").addConverterFactory(SimpleXmlConverterFactory.create()).build();
+        Retrofit retrofit = new Retrofit.Builder().baseUrl("https://www.plough.com/").addConverterFactory(SimpleXmlConverterFactory.create()).build();
         ReflectionApi api = retrofit.create(ReflectionApi.class);
         Call<RssResponse> apiCall = api.get();
         apiCall.enqueue(callback);
