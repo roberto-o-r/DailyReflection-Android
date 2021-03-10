@@ -118,7 +118,7 @@
         android:src="@drawable/ic_favorite_border_white_24dp"
         app:fabSize="mini"
         app:layout_anchor="@id/main.appbar"
-        app:layout_anchorGravity="bottom|right|end" />
+        app:layout_anchorGravity="bottom|right|end"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/button_play"
@@ -136,7 +136,7 @@
         android:id="@+id/layout_progress"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/colorPrimary"
+        android:background="@color/gray"
         android:visibility="gone">
 
         <ProgressBar
